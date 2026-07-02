@@ -1,0 +1,17 @@
+[project]
+name = "automower-collector"
+version = "0.1.0"
+description = "Collects Husqvarna Automower Connect data into InfluxDB"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.9,<4",
+    "influxdb-client[async]>=1.43,<2",
+    "orjson>=3.9,<4",
+]
+
+# No [build-system]: this is a flat application (collector.py, husqvarna.py, ...),
+# not an installable package. uv treats it as a "virtual" project and only
+# manages the dependency environment — nothing to build.
+
+[tool.uv]
+package = false

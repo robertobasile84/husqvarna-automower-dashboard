@@ -1,0 +1,86 @@
+# Automower dashboard — collector + InfluxDB + Grafana.
+#
+# All images are multi-arch (amd64 / arm64), so this runs anywhere Docker
+# Compose runs. The collector is built from ./collector by default, so a fresh
+# clone launches with no published image needed:
+#
+#     docker compose up -d --build
+#
+# With no Husqvarna credentials set, the collector runs in DEMO mode and feeds
+# the dashboard synthetic data — so you can see it working before wiring up a
+# real mower. Copy .env.example to .env and add credentials for real data.
+#
+# NOTE: the default passwords/token below are for local testing ONLY. Set your
+# own in .env before deploying anywhere that matters.
+
+services:
+  influxdb:
+    image: influxdb:2.7
+    restart: unless-stopped
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USERNAME:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD:-automower-dev}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG:-automower}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET:-automower}
+      DOCKER_INFLUXDB_INIT_RETENTION: ${INFLUXDB_RETENTION:-0s}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN:-automower-dev-token}
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    ports:
+      - "${INFLUXDB_PORT:-8086}:8086"
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  collector:
+    # Built from source by default so a bare clone works. Override COLLECTOR_IMAGE
+    # (e.g. to a published GHCR tag) to pull instead of build.
+    image: ${COLLECTOR_IMAGE:-automower-collector:local}
+    build: ./collector
+    restart: unless-stopped
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    environment:
+      # Leave these empty to run in DEMO mode (synthetic data, no account needed).
+      HUSQVARNA_CLIENT_ID: ${HUSQVARNA_CLIENT_ID:-}
+      HUSQVARNA_CLIENT_SECRET: ${HUSQVARNA_CLIENT_SECRET:-}
+      DEMO_MODE: ${DEMO_MODE:-}
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-automower-dev-token}
+      INFLUXDB_ORG: ${INFLUXDB_ORG:-automower}
+      INFLUXDB_BUCKET: ${INFLUXDB_BUCKET:-automower}
+      REST_POLL_INTERVAL: ${REST_POLL_INTERVAL:-3600}
+      WRITE_POSITIONS: ${WRITE_POSITIONS:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_DEFAULT_THEME: dark
+      # Consumed by the provisioned datasource (grafana/provisioning/datasources).
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-automower-dev-token}
+      INFLUXDB_ORG: ${INFLUXDB_ORG:-automower}
+      INFLUXDB_BUCKET: ${INFLUXDB_BUCKET:-automower}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "${GRAFANA_PORT:-3005}:3000"
+
+volumes:
+  influxdb-data:
+  influxdb-config:
+  grafana-data:

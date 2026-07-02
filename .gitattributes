@@ -1,0 +1,4 @@
+# Keep LF everywhere so the same files work on Windows, macOS and Linux.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
