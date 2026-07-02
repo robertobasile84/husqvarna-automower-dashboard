@@ -9,7 +9,7 @@ All three images are multi-arch (amd64 / arm64) and the collector is pure
 Python, so **this runs anywhere `docker compose` runs** — a Raspberry Pi, a NAS,
 or a homelab server.
 
-```
+```mermaid
 ┌────────────┐   WebSocket (real-time)     ┌──────────┐        ┌─────────┐
 │  Husqvarna │   + REST poll (statistics)  │ collector│  write │ InfluxDB│
 │ Connect API│ ──────────────────────────► │ (Python) │ ─────► │  (TSDB) │
@@ -22,8 +22,10 @@ or a homelab server.
 
 ## What you get
 
-- **Real-time** battery %, activity, state, mode, cutting height, online status,
-  and last error (as readable text, not just a code) — pushed over the WebSocket.
+- **Near-real-time** battery %, activity, state, mode, cutting height, online
+  status, and last error (as readable text, not just a code) — pushed over the
+  WebSocket. Husqvarna batches these to save the mower's battery, so they arrive
+  roughly every 15 minutes, not continuously.
 - **GPS position** map (the Connect API returns the last 50 positions for
   GPS-assisted models; the collector stores each update to build a track).
 - **Historic** statistics: total cutting / running / charging / searching time,
@@ -113,6 +115,10 @@ The Python project is managed with [uv](https://docs.astral.sh/uv/): dependencie
 are declared in `collector/pyproject.toml` and pinned in `collector/uv.lock`, and
 the Docker image builds from that lockfile for reproducible, multi-arch builds.
 
+The API surface (endpoints, data model, WebSocket events, and the control-action
+blueprint) is distilled in [`docs/api-reference.md`](docs/api-reference.md),
+cross-checked against Husqvarna's official OpenAPI spec.
+
 - **`collector/husqvarna.py`** — a ~250-line async client: OAuth2 token handling
   (auto-refresh), `GET /mowers` for the full snapshot, and a resilient WebSocket
   listener with app-level keep-alives, token-aware reconnects before the ~2h
@@ -120,9 +126,11 @@ the Docker image builds from that lockfile for reproducible, multi-arch builds.
 - **`collector/collector.py`** — keeps an in-memory copy of each mower's
   attributes (seeded from REST, updated by WebSocket `*-event-v2` deltas) and
   writes an InfluxDB point on every change. Statistics come from the REST poll;
-  everything else is real-time.
-- Real-time state costs no REST quota (it's the WebSocket's job); the REST poll
-  runs hourly by default, far inside the API's free quota.
+  status/battery/position updates come from the WebSocket.
+- WebSocket updates cost no REST quota, but the mower throttles them to ~every
+  15 minutes (battery saving). The REST poll (hourly by default) refreshes
+  statistics and acts as a backstop — lower `REST_POLL_INTERVAL` toward `900`
+  if you want guaranteed sub-15-minute freshness without relying on the socket.
 
 ### Measurements
 
@@ -167,4 +175,3 @@ homelab (like `srv-basement`): copy the directory in, add a catalog row, and —
 you want a cert'd name for the Grafana UI — front it with your usual Tailscale
 Serve sidecar. Only the collector's outbound HTTPS/WSS to Husqvarna is required;
 nothing needs to be exposed publicly.
-```

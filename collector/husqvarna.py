@@ -19,12 +19,14 @@ The API is a JSON:API service: ``GET /mowers`` returns ``{"data": [ {"id", "type
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
 import aiohttp
+from aiohttp import WSServerHandshakeError
 
 _LOGGER = logging.getLogger("husqvarna")
 
@@ -129,24 +131,52 @@ class AutomowerClient:
 
     # -- Run loop ----------------------------------------------------------
     async def run(self) -> None:
-        """Run forever: (re)connect the WebSocket with exponential backoff."""
-        backoff = 5
+        """Run forever. REST polling and the WebSocket run independently, so a
+        WebSocket that refuses to connect never stops REST data from flowing."""
         async with aiohttp.ClientSession() as session:
             self._session = session
-            while True:
-                try:
-                    await self._run_once()
-                    backoff = 5  # a clean lifecycle resets the backoff
-                except asyncio.CancelledError:
-                    raise
-                except Exception:  # noqa: BLE001 - keep the collector alive
-                    _LOGGER.exception("Session error; reconnecting in %ss", backoff)
-                    await asyncio.sleep(backoff)
-                    backoff = min(backoff * 2, 300)
+            await self._snapshot()  # initial state; surfaces bad credentials early
+            await asyncio.gather(self._rest_forever(), self._ws_forever())
 
-    async def _run_once(self) -> None:
-        """One WebSocket lifecycle: snapshot, then listen until it needs cycling."""
-        await self._snapshot()
+    async def _rest_forever(self) -> None:
+        """Poll REST at the configured interval, forever."""
+        while True:
+            await asyncio.sleep(self._rest_poll_interval)
+            try:
+                await self._snapshot()
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("Periodic REST poll failed")
+
+    async def _ws_forever(self) -> None:
+        """Maintain the real-time WebSocket, reconnecting with backoff. Best
+        effort: if it never connects, REST polling still carries the data."""
+        backoff = 5
+        while True:
+            try:
+                await self._ws_session()
+                backoff = 5  # a clean lifecycle resets the backoff
+            except asyncio.CancelledError:
+                raise
+            except WSServerHandshakeError as err:
+                _LOGGER.warning(
+                    "WebSocket handshake refused (HTTP %s). Real-time updates are "
+                    "off; REST polling continues. This is usually an application-"
+                    "key/WebSocket-compatibility issue on the Husqvarna portal, not "
+                    "a bad credential. Retrying in %ss.",
+                    err.status,
+                    backoff,
+                )
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 300)
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("WebSocket error; reconnecting in %ss", backoff)
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 300)
+
+    async def _ws_session(self) -> None:
+        """One WebSocket lifecycle: connect and listen until it needs cycling."""
         token = await self._get_token()
         assert self._session is not None
         async with self._session.ws_connect(
@@ -155,10 +185,7 @@ class AutomowerClient:
             heartbeat=KEEPALIVE_INTERVAL,
         ) as ws:
             _LOGGER.info("WebSocket connected")
-            tasks = [
-                asyncio.create_task(self._keepalive(ws)),
-                asyncio.create_task(self._poll_loop()),
-            ]
+            keepalive = asyncio.create_task(self._keepalive(ws))
             deadline = time.time() + WS_MAX_LIFETIME
             try:
                 while True:
@@ -179,13 +206,9 @@ class AutomowerClient:
                         _LOGGER.warning("WebSocket closed (%s); reconnecting", msg.type)
                         return
             finally:
-                for task in tasks:
-                    task.cancel()
-                for task in tasks:
-                    try:
-                        await task
-                    except (asyncio.CancelledError, Exception):  # noqa: BLE001
-                        pass
+                keepalive.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await keepalive
 
     async def _handle_ws_text(self, raw: str) -> None:
         """Dispatch a text frame: event, keep-alive pong, or connection banner."""
@@ -214,15 +237,6 @@ class AutomowerClient:
                 await ws.send_str("")
             except (ConnectionError, aiohttp.ClientError):
                 return
-
-    async def _poll_loop(self) -> None:
-        """Periodically re-pull REST for statistics and to resync state."""
-        while True:
-            await asyncio.sleep(self._rest_poll_interval)
-            try:
-                await self._snapshot()
-            except Exception:  # noqa: BLE001
-                _LOGGER.exception("Periodic REST poll failed")
 
     async def _snapshot(self) -> None:
         mowers = await self.get_mowers()
