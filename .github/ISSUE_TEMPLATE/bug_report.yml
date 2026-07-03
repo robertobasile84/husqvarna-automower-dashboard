@@ -1,0 +1,54 @@
+name: Bug report
+description: Something isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug! Please do **not** include your
+        Husqvarna Application key/secret or InfluxDB token in this report.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Set ... in .env
+        2. docker compose up -d
+        3. Open the dashboard / check collector logs
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Collector logs
+      description: "Output of `docker compose logs collector` (redact any secrets)."
+      render: text
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - Real data (Husqvarna credentials set)
+        - Demo mode (no credentials)
+    validations:
+      required: true
+  - type: input
+    id: mower-model
+    attributes:
+      label: Mower model (if real data)
+      placeholder: e.g. Automower 315X
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Host OS, architecture (amd64/arm64), Docker version.
+      placeholder: "e.g. Raspberry Pi 4 (arm64), Docker 27.x, Ubuntu 24.04"
+    validations:
+      required: true

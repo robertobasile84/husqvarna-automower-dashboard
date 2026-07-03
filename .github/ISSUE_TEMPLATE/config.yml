@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/robertobasile84/husqvarna-automower-dashboard/discussions
+    about: Ask a question or share how you're using the dashboard.
+  - name: Security vulnerability
+    url: https://github.com/robertobasile84/husqvarna-automower-dashboard/security/advisories/new
+    about: Report a security issue privately (do not open a public issue).

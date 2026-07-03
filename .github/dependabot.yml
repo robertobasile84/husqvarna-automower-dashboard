@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # GitHub Actions used by the workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
+
+  # Python dependencies for the collector (pyproject.toml / uv.lock).
+  - package-ecosystem: uv
+    directory: /collector
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
+
+  # Base image in the collector Dockerfile.
+  - package-ecosystem: docker
+    directory: /collector
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
