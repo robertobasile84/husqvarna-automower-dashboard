@@ -223,7 +223,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.9,<4" },
-    { name = "influxdb-client", extras = ["async"], specifier = ">=1.43,<2" },
+    { name = "influxdb-client", extras = ["async"], specifier = ">=1.50.0,<2" },
     { name = "orjson", specifier = ">=3.9,<4" },
 ]
 

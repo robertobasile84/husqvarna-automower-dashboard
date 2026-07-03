@@ -5,7 +5,7 @@ description = "Collects Husqvarna Automower Connect data into InfluxDB"
 requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.9,<4",
-    "influxdb-client[async]>=1.43,<2",
+    "influxdb-client[async]>=1.50.0,<2",
     "orjson>=3.9,<4",
 ]
 
