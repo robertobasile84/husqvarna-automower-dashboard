@@ -109,9 +109,7 @@ class Collector:
 
         def tag(point: Point) -> Point:
             return (
-                point.tag("mower", name)
-                .tag("mower_id", mower_id)
-                .tag("model", model)
+                point.tag("mower", name).tag("mower_id", mower_id).tag("model", model)
             )
 
         # --- status ---
@@ -138,7 +136,9 @@ class Collector:
         status.field("is_online", int(connected))
         status.field("is_mowing", int(activity in MOWING_ACTIVITIES))
         status.field("is_charging", int(activity == "charging"))
-        status.field("is_error", int(state in {"error", "fatal_error", "error_at_power_up"}))
+        status.field(
+            "is_error", int(state in {"error", "fatal_error", "error_at_power_up"})
+        )
         if settings.get("cuttingHeight") is not None:
             status.field("cutting_height", int(settings["cuttingHeight"]))
         next_start = planner.get("nextStartTimestamp")

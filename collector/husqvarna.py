@@ -192,7 +192,7 @@ class AutomowerClient:
                     timeout = max(1.0, deadline - time.time())
                     try:
                         msg = await ws.receive(timeout=timeout)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         _LOGGER.info("WebSocket lifetime reached; cycling connection")
                         return
                     if msg.type == aiohttp.WSMsgType.TEXT:
