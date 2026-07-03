@@ -1,0 +1,43 @@
+name: ci
+
+# Validates every pull request (and pushes to main): linting, a collector image
+# build, and compose validation. Publishing happens separately in build.yml.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: collector
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Ruff lint
+        run: uvx ruff@0.8 check .
+      - name: Ruff format check
+        run: uvx ruff@0.8 format --check .
+      - name: Verify uv.lock is up to date
+        run: uv lock --locked
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build collector image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./collector
+          push: false
+          load: true
+      - name: Validate compose files
+        run: |
+          docker compose config >/dev/null
+          docker compose -f compose.yaml -f compose.dev.yaml config >/dev/null
