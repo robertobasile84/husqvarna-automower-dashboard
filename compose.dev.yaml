@@ -1,0 +1,12 @@
+# Developer overlay — build the collector from ./collector instead of pulling
+# the published image. Layer it on top of the base stack:
+#
+#   docker compose -f compose.yaml -f compose.dev.yaml up -d --build
+#
+# The base compose.yaml alone pulls ghcr.io/.../automower-collector:latest, so
+# normal users never need this file.
+
+services:
+  collector:
+    image: automower-collector:local
+    build: ./collector

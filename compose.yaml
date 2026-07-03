@@ -38,10 +38,11 @@ services:
       start_period: 10s
 
   collector:
-    # Built from source by default so a bare clone works. Override COLLECTOR_IMAGE
-    # (e.g. to a published GHCR tag) to pull instead of build.
-    image: ${COLLECTOR_IMAGE:-automower-collector:local}
-    build: ./collector
+    # Pulls the published multi-arch image, so a fresh user only needs
+    # `docker compose up -d` — no local build, no source checkout required.
+    # Developers can build from source with the dev overlay:
+    #   docker compose -f compose.yaml -f compose.dev.yaml up -d --build
+    image: ${COLLECTOR_IMAGE:-ghcr.io/robertobasile84/automower-collector:latest}
     restart: unless-stopped
     depends_on:
       influxdb:

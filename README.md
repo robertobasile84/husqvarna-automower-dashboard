@@ -2,8 +2,8 @@
 
 Self-hosted **historic + real-time dashboard** for a Husqvarna Automower, built
 on the official [Automower Connect API](https://developer.husqvarnagroup.cloud/apis).
-No Home Assistant, no third-party Husqvarna SDK — just a small Python collector,
-InfluxDB, and Grafana in one Docker Compose stack.
+No home-automation platform and no third-party Husqvarna SDK — just a small
+Python collector, InfluxDB, and Grafana in one Docker Compose stack.
 
 All three images are multi-arch (amd64 / arm64) and the collector is pure
 Python, so **this runs anywhere `docker compose` runs** — a Raspberry Pi, a NAS,
@@ -52,7 +52,7 @@ with realistic synthetic data:
 ```bash
 git clone https://github.com/robertobasile84/husqvarna-automower-dashboard
 cd husqvarna-automower-dashboard
-docker compose up -d --build
+docker compose up -d
 ```
 
 Open **http://localhost:3005** → log in `admin` / `admin` → the **Automower**
@@ -69,8 +69,8 @@ compose file and are for local testing only.)
    **Application secret** (`client_secret`, under *Show more*).
 
    > The collector uses the OAuth2 **client-credentials** grant, tied to your own
-   > account — so no interactive login/redirect is needed. An existing
-   > application (e.g. one you already use for Home Assistant) works fine.
+   > account — so no interactive login/redirect is needed. Any application in
+   > your developer account works; you can reuse an existing one.
 
 ```bash
 cp .env.example .env
@@ -78,7 +78,7 @@ cp .env.example .env
 # For anything beyond local testing, also set your own INFLUXDB_TOKEN,
 # INFLUXDB_PASSWORD and GRAFANA_PASSWORD (a random token: openssl rand -hex 32).
 
-docker compose up -d --build
+docker compose up -d
 ```
 
 With credentials present the collector connects to the real API instead of the
@@ -146,7 +146,7 @@ All are tagged with `mower`, `mower_id`, and `model`.
 
 ```bash
 docker compose logs -f collector     # watch it connect + write
-docker compose up -d --build         # rebuild after a code change
+docker compose pull && docker compose up -d   # update to the latest image
 docker compose down                  # stop (data persists in named volumes)
 ```
 
@@ -155,23 +155,36 @@ The stack keeps state in named volumes (`influxdb-data`, `grafana-data`). Back u
 
 ## Working on the collector (uv)
 
-You don't need a local Python at all — Docker handles everything. But if you want
-to iterate on the collector outside Docker:
+You don't need a local Python at all — Docker handles everything. To run the
+stack with the collector **built from your working tree** (instead of pulling the
+published image), layer on the dev overlay:
+
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml up -d --build
+```
+
+To iterate on the collector outside Docker:
 
 ```bash
 cd collector
 uv sync                 # create .venv from the lockfile
 uv run python collector.py    # needs INFLUXDB_* env + a reachable InfluxDB
+uvx ruff@0.8 check .          # lint before opening a PR
 ```
 
 Change dependencies in `pyproject.toml`, then `uv lock` to refresh `uv.lock`
 (commit both). The Docker image installs strictly from `uv.lock`, so a build is
 reproducible and matches your local env.
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow — `main` is
+protected, so changes land through pull requests.
+
 ## Deploying to a homelab
 
 This is a standalone stack, but it drops straight into a per-service Compose
-homelab (like `srv-basement`): copy the directory in, add a catalog row, and — if
-you want a cert'd name for the Grafana UI — front it with your usual Tailscale
-Serve sidecar. Only the collector's outbound HTTPS/WSS to Husqvarna is required;
-nothing needs to be exposed publicly.
+homelab (like `srv-basement`). Because the collector image is pulled from GHCR,
+you only need `compose.yaml`, the `grafana/` folder, and your `.env` — no source
+checkout or build. Add a catalog row, and — if you want a cert'd name for the
+Grafana UI — front it with your usual Tailscale Serve sidecar. Only the
+collector's outbound HTTPS/WSS to Husqvarna is required; nothing needs to be
+exposed publicly.
