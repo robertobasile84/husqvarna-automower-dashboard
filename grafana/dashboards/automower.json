@@ -54,7 +54,7 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false },
         "graphMode": "area",
         "colorMode": "value",
         "textMode": "value"
@@ -74,7 +74,7 @@
       "gridPos": { "h": 4, "w": 5, "x": 4, "y": 0 },
       "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" } }, "overrides": [] },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false },
         "colorMode": "background",
         "textMode": "value"
       },
@@ -93,7 +93,7 @@
       "gridPos": { "h": 4, "w": 5, "x": 9, "y": 0 },
       "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "purple" } }, "overrides": [] },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false },
         "colorMode": "background",
         "textMode": "value"
       },
@@ -120,7 +120,7 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false },
         "colorMode": "background",
         "textMode": "value"
       },
@@ -139,7 +139,7 @@
       "gridPos": { "h": 4, "w": 7, "x": 17, "y": 0 },
       "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "orange" } }, "overrides": [] },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false },
         "colorMode": "none",
         "textMode": "value"
       },
@@ -265,7 +265,7 @@
       "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 22 },
       "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "fixed", "fixedColor": "green" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "textMode": "value" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false }, "colorMode": "value", "textMode": "value" },
       "targets": [
         {
           "refId": "A",
@@ -280,7 +280,7 @@
       "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 22 },
       "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "fixed", "fixedColor": "blue" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "textMode": "value" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false }, "colorMode": "value", "textMode": "value" },
       "targets": [
         {
           "refId": "A",
@@ -295,7 +295,7 @@
       "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 22 },
       "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "fixed", "fixedColor": "orange" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "textMode": "value" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false }, "colorMode": "value", "textMode": "value" },
       "targets": [
         {
           "refId": "A",
@@ -310,7 +310,7 @@
       "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
       "gridPos": { "h": 4, "w": 4, "x": 12, "y": 22 },
       "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "yellow" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "textMode": "value" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false }, "colorMode": "value", "textMode": "value" },
       "targets": [
         {
           "refId": "A",
@@ -325,7 +325,7 @@
       "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 22 },
       "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "red" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "textMode": "value" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false }, "colorMode": "value", "textMode": "value" },
       "targets": [
         {
           "refId": "A",
@@ -340,7 +340,7 @@
       "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 22 },
       "fieldConfig": { "defaults": { "unit": "lengthm", "color": { "mode": "fixed", "fixedColor": "purple" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "textMode": "value" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false }, "colorMode": "value", "textMode": "value" },
       "targets": [
         {
           "refId": "A",
