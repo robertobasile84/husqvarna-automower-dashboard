@@ -21,7 +21,7 @@ import argparse
 import asyncio
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from husqvarna import AutomowerClient
 
@@ -29,13 +29,21 @@ from husqvarna import AutomowerClient
 def _fmt_epoch_ms(ms: int | None) -> str:
     if not ms:
         return "-"
-    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).astimezone().isoformat(
-        timespec="seconds"
+    return (
+        datetime.fromtimestamp(ms / 1000, tz=UTC)
+        .astimezone()
+        .isoformat(timespec="seconds")
     )
 
 
+def _fmt_hours(seconds: int | None) -> str:
+    return f"{(seconds or 0) / 3600:.1f}h"
+
+
 def _print_snapshot(mowers: list[dict]) -> None:
-    print(f"\n=== REST snapshot: {len(mowers)} mower(s) @ {datetime.now():%H:%M:%S} ===")
+    print(
+        f"\n=== REST snapshot: {len(mowers)} mower(s) @ {datetime.now():%H:%M:%S} ==="
+    )
     for m in mowers:
         a = m.get("attributes", {})
         system = a.get("system", {})
@@ -53,14 +61,17 @@ def _print_snapshot(mowers: list[dict]) -> None:
         print(f"    state        {mower.get('state')}   mode={mower.get('mode')}")
         print(f"    errorCode    {mower.get('errorCode')}")
         print(f"    next start   {_fmt_epoch_ms(planner.get('nextStartTimestamp'))}")
-        print(f"    positions    {len(positions)} point(s)"
-              + (f"  latest={positions[0]}" if positions else ""))
+        print(
+            f"    positions    {len(positions)} point(s)"
+            + (f"  latest={positions[0]}" if positions else "")
+        )
         if stats:
-            hours = lambda s: f"{(s or 0) / 3600:.1f}h"
-            print(f"    stats        cutting={hours(stats.get('totalCuttingTime'))}"
-                  f"  running={hours(stats.get('totalRunningTime'))}"
-                  f"  charges={stats.get('numberOfChargingCycles')}"
-                  f"  collisions={stats.get('numberOfCollisions')}")
+            print(
+                f"    stats        cutting={_fmt_hours(stats.get('totalCuttingTime'))}"
+                f"  running={_fmt_hours(stats.get('totalRunningTime'))}"
+                f"  charges={stats.get('numberOfChargingCycles')}"
+                f"  collisions={stats.get('numberOfCollisions')}"
+            )
 
 
 def _print_event(mower_id: str, event: dict) -> None:
@@ -112,7 +123,7 @@ async def main() -> None:
     try:
         # Wait for the first REST snapshot (proves auth + REST work).
         await asyncio.wait_for(first_snapshot.wait(), timeout=30)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         print("\n!! No snapshot within 30s — check credentials / API access.")
         run_task.cancel()
         return

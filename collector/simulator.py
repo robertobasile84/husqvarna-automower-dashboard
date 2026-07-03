@@ -98,8 +98,12 @@ class Simulator:
         self._lat += random.uniform(-1, 1) * span
         self._lon += random.uniform(-1, 1) * span
         # Keep it roughly within the working area around the station.
-        self._lat = max(self._center[0] - 0.0004, min(self._center[0] + 0.0004, self._lat))
-        self._lon = max(self._center[1] - 0.0004, min(self._center[1] + 0.0004, self._lon))
+        self._lat = max(
+            self._center[0] - 0.0004, min(self._center[0] + 0.0004, self._lat)
+        )
+        self._lon = max(
+            self._center[1] - 0.0004, min(self._center[1] + 0.0004, self._lon)
+        )
 
     def _near_center(self) -> bool:
         return (
