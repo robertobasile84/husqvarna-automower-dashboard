@@ -55,9 +55,9 @@ cd husqvarna-automower-dashboard
 docker compose up -d
 ```
 
-Open **http://localhost:3005** → log in `admin` / `admin` → the **Automower**
-dashboard is pre-loaded and filling in. (Those default credentials come from the
-compose file and are for local testing only.)
+Open **http://localhost:3005** → the **Automower** dashboard is pre-loaded and
+filling in, no login needed (Grafana opens read-only). To edit, log in `admin` /
+`admin` — default credentials from the compose file, for local testing only.
 
 ## Run it for real
 
@@ -108,6 +108,26 @@ ones you'll actually touch:
 | `REST_POLL_INTERVAL` | `3600` | Seconds between REST polls (statistics refresh) |
 | `WRITE_POSITIONS` | `true` | Set `false` to skip storing GPS positions |
 | `LOG_LEVEL` | `INFO` | `DEBUG` to see every event and write |
+| `MAP_LAT` / `MAP_LON` / `MAP_ZOOM` | Zürich demo location | Center of the Position map — see below |
+| `GRAFANA_ANONYMOUS` | `true` | `false` to require a Grafana login instead of read-only anonymous view |
+
+### Centering the map on your mower
+
+The **Position** panel uses a fixed satellite view. Out of the box it centers on
+the demo location (Zürich). To point it at your own lawn, set the coordinates in
+`.env` and restart Grafana:
+
+```bash
+# in .env — find the values on any map site (right-click → coordinates)
+MAP_LAT=45.4642
+MAP_LON=9.1900
+MAP_ZOOM=18     # ~17-18 is a garden-sized close-up
+
+docker compose up -d grafana
+```
+
+Your coordinates live only in your `.env` (which is gitignored), so they never
+end up in the repo. Leave them unset and the map just stays on the demo location.
 
 ## How it works
 
