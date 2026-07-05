@@ -1,7 +1,9 @@
 name: ci
 
 # Validates every pull request (and pushes to main): linting, a collector image
-# build, and compose validation. Publishing happens separately in build.yml.
+# build, compose validation, and an end-to-end smoke test that boots the whole
+# stack from source and checks it actually works. Publishing happens separately
+# in build.yml.
 on:
   pull_request:
   push:
@@ -41,3 +43,61 @@ jobs:
         run: |
           docker compose config >/dev/null
           docker compose -f compose.yaml -f compose.dev.yaml config >/dev/null
+
+  # End-to-end smoke test: build both images from *this* PR's source, boot the
+  # full stack in demo mode, and assert it actually works — the same clean-room
+  # checks a new user's `docker compose up -d` would hit. Uses compose.dev.yaml
+  # so it tests the PR's code, not the already-published :latest images.
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build & start the stack from source (demo mode)
+        run: >
+          docker compose -f compose.yaml -f compose.dev.yaml
+          up -d --build --wait --wait-timeout 240
+
+      - name: Smoke-test the running stack
+        run: |
+          set -euo pipefail
+
+          echo "::group::wait for Grafana API"
+          for i in $(seq 1 45); do
+            curl -fsS http://localhost:3005/api/health >/dev/null 2>&1 && break
+            sleep 2
+          done
+          echo "::endgroup::"
+
+          echo "-> Grafana health"
+          curl -fsS http://localhost:3005/api/health | grep -q '"database": *"ok"'
+
+          echo "-> dashboard provisioned and visible anonymously (no login)"
+          curl -fsS 'http://localhost:3005/api/search?type=dash-db' | grep -q automower-main
+
+          echo "-> InfluxDB datasource provisioned"
+          curl -fsS 'http://localhost:3005/api/datasources' | grep -q automower-influxdb
+
+          echo "-> demo data actually flowing into InfluxDB"
+          INFLUX=$(docker compose -f compose.yaml -f compose.dev.yaml ps -q influxdb)
+          for i in $(seq 1 20); do
+            if docker exec "$INFLUX" influx query \
+                 'import "influxdata/influxdb/schema" schema.measurements(bucket:"automower")' \
+                 --token automower-dev-token --org automower 2>/dev/null | grep -q automower_status; then
+              echo "   data present"; break
+            fi
+            sleep 3
+          done
+          docker exec "$INFLUX" influx query \
+            'import "influxdata/influxdb/schema" schema.measurements(bucket:"automower")' \
+            --token automower-dev-token --org automower | grep -q automower_status
+
+          echo "ALL SMOKE CHECKS PASSED"
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f compose.yaml -f compose.dev.yaml logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f compose.yaml -f compose.dev.yaml down -v
