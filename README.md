@@ -44,27 +44,27 @@ Just **Docker + Docker Compose v2** on the host — nothing else. Works the same
 The container is Linux regardless of host OS, and the image is multi-arch, so an
 Apple-silicon Mac, an x86 PC, and an ARM box all run the identical stack.
 
-## Try it in 30 seconds (demo mode)
+## Try it in 30 seconds (demo mode — no clone)
 
-No Husqvarna account, no mower, no config needed — see the dashboard populated
-with realistic synthetic data:
+No Husqvarna account, no mower, no config, **no clone**. The whole stack is three
+published images and one `compose.yaml`, so grab that single file and run it:
 
 ```bash
-git clone https://github.com/robertobasile84/husqvarna-automower-dashboard
-cd husqvarna-automower-dashboard
+mkdir automower-dashboard && cd automower-dashboard
+curl -O https://raw.githubusercontent.com/robertobasile84/husqvarna-automower-dashboard/main/compose.yaml
 docker compose up -d
 ```
 
 Open **http://localhost:3005** → the **Automower** dashboard is pre-loaded and
-filling in, no login needed (Grafana opens read-only). To edit, log in `admin` /
-`admin` — default credentials from the compose file, for local testing only.
+filling in with synthetic data, no login needed (Grafana opens read-only). To
+edit, log in `admin` / `admin` — local-testing defaults from the compose file.
 
-> **Nothing compiles here.** `docker compose up -d` *pulls* the prebuilt
-> multi-arch images from GHCR — you never build. Both the collector *and* Grafana
-> (dashboard + datasource baked in) are published images, so the only file you
-> actually need to run the stack is `compose.yaml` — the clone is just the easy
-> way to get it. See [Deploying to a homelab](#deploying-to-a-homelab) for the
-> single-file approach. Building from source is opt-in (`compose.dev.yaml`, below).
+> **Nothing to clone or build.** `docker compose up -d` *pulls* prebuilt
+> multi-arch images from GHCR — the collector and Grafana (dashboard + datasource
+> baked in) are both published images, and the compose file mounts nothing from
+> disk. **That one file is the entire deployment.** You only need the repo if you
+> want to [contribute](#working-on-the-collector-uv) (clone) or
+> [change the dashboard / collector](#working-on-the-dashboard) (fork + build).
 
 ## Run it for real
 
@@ -79,18 +79,35 @@ filling in, no login needed (Grafana opens read-only). To edit, log in `admin` /
    > account — so no interactive login/redirect is needed. Any application in
    > your developer account works; you can reuse an existing one.
 
-```bash
-cp .env.example .env
-# edit .env: paste your Application key + secret.
-# For anything beyond local testing, also set your own INFLUXDB_TOKEN,
-# INFLUXDB_PASSWORD and GRAFANA_PASSWORD (a random token: openssl rand -hex 32).
+In the **same folder** as your `compose.yaml`, create a `.env` — this is the
+minimal real-data setup:
 
+```bash
+# .env
+HUSQVARNA_CLIENT_ID=your-application-key
+HUSQVARNA_CLIENT_SECRET=your-application-secret
+
+# Secure the stack for anything networked (random token: openssl rand -hex 32).
+INFLUXDB_TOKEN=replace-with-a-long-random-string
+GRAFANA_PASSWORD=replace-with-a-password
+GRAFANA_ANONYMOUS=false      # require a Grafana login (omit to keep the open read-only view)
+
+# Center the Position map on your lawn (any map site → right-click → coordinates).
+MAP_LAT=42.7135
+MAP_LON=-83.1286
+MAP_ZOOM=18
+```
+
+Then (re)launch:
+
+```bash
 docker compose up -d
 ```
 
 With credentials present the collector connects to the real API instead of the
 simulator. Open Grafana at **http://localhost:3005**; InfluxDB's own UI is at
-**http://localhost:8086** for poking at raw data.
+**http://localhost:8086** for poking at raw data. Every available knob is listed
+in [`.env.example`](.env.example) and under [Configuration](#configuration).
 
 Data accumulates from the moment the collector starts; the statistics counters
 are cumulative lifetime totals reported by the mower, so the trend panels get
