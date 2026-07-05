@@ -59,6 +59,12 @@ Open **http://localhost:3005** → the **Automower** dashboard is pre-loaded and
 filling in, no login needed (Grafana opens read-only). To edit, log in `admin` /
 `admin` — default credentials from the compose file, for local testing only.
 
+> **Nothing compiles here.** `docker compose up -d` *pulls* the prebuilt
+> multi-arch images from GHCR — you never build. The clone is just the easy way
+> to grab the `compose.yaml` + `grafana/` files; if you'd rather not check out the
+> source at all, see [Deploying to a homelab](#deploying-to-a-homelab) for the
+> files-only approach. Building from source is opt-in (`compose.dev.yaml`, below).
+
 ## Run it for real
 
 1. A Husqvarna Automower with a **Connect** module, already paired to your
