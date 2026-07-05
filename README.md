@@ -225,6 +225,30 @@ docker compose -f compose.yaml -f compose.dev.yaml up -d --build grafana
 Merging to `main` republishes both images; consumers get the new dashboard with a
 plain `docker compose pull`.
 
+## Talk to your dashboard with an AI assistant (MCP)
+
+An optional overlay runs [Grafana's official MCP server](https://github.com/grafana/mcp-grafana)
+next to the stack, so an MCP client (Claude, etc.) can search your dashboard and
+query the mower data directly.
+
+1. **Create a Grafana service-account token** — in Grafana, *Administration →
+   Service accounts → Add* (role **Viewer**) → *Add service account token* → copy it.
+2. **Put it in `.env`**: `GRAFANA_SERVICE_ACCOUNT_TOKEN=glsa_…`
+3. **Start with the overlay:**
+   ```bash
+   docker compose -f compose.yaml -f compose.mcp.yaml up -d
+   ```
+   The MCP server reaches Grafana in-network (`http://grafana:3000`) — no tunnel
+   needed — and listens on `http://<host>:8000/mcp` (streamable HTTP).
+4. **Point your client at it.** For Claude Code:
+   ```bash
+   claude mcp add --transport http automower http://localhost:8000/mcp
+   ```
+
+Keep port `8000` on a trusted network (localhost / your tailnet): the endpoint
+has no auth of its own — the service-account token is what scopes Grafana access,
+and a Viewer token keeps it read-only.
+
 ## Deploying to a homelab
 
 This is a standalone stack, but it drops straight into a per-service Compose
