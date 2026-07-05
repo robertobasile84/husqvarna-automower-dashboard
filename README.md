@@ -1,24 +1,26 @@
 # Automower Dashboard
 
-Self-hosted **historic + real-time dashboard** for a Husqvarna Automower, built
+Self-hosted **historic + real-time Grafana dashboard** for a Husqvarna Automower,
 on the official [Automower Connect API](https://developer.husqvarnagroup.cloud/apis).
-No home-automation platform and no third-party Husqvarna SDK — just a small
-Python collector, InfluxDB, and Grafana in one Docker Compose stack.
+A small Python collector feeds InfluxDB; Grafana shows it. Runs anywhere
+`docker compose` runs — a Raspberry Pi, a NAS, or a homelab server.
 
-All three images are multi-arch (amd64 / arm64) and the collector is pure
-Python, so **this runs anywhere `docker compose` runs** — a Raspberry Pi, a NAS,
-or a homelab server.
+## Quickstart
 
-```mermaid
-┌────────────┐   WebSocket (real-time)     ┌──────────┐        ┌─────────┐
-│  Husqvarna │   + REST poll (statistics)  │ collector│  write │ InfluxDB│
-│ Connect API│ ──────────────────────────► │ (Python) │ ─────► │  (TSDB) │
-└────────────┘                             └──────────┘        └────┬────┘
-                                                                    │ Flux
-                                                               ┌────▼────┐
-                                                               │ Grafana │
-                                                               └─────────┘
+**One file. No clone, no build.** Grab the compose file into an empty folder and
+start it:
+
+```bash
+mkdir automower-dashboard && cd automower-dashboard
+curl -O https://raw.githubusercontent.com/robertobasile84/husqvarna-automower-dashboard/main/compose.yaml
+docker compose up -d
 ```
+
+Open **http://localhost:3005**. The dashboard is already there, filling with
+**demo data** — no login, nothing to configure. **That's it.**
+
+- 🌱 **Put your real mower on it** → [Run it for real](#run-it-for-real) (add a `.env`)
+- 🛠️ **Change it or contribute** → clone to contribute, fork + build to modify — see [Working on the dashboard](#working-on-the-dashboard)
 
 ## What you get
 
@@ -33,38 +35,19 @@ or a homelab server.
 - A provisioned Grafana dashboard (as code) and InfluxDB datasource — nothing to
   click to set up; it appears on first boot.
 
-## Requirements
-
-Just **Docker + Docker Compose v2** on the host — nothing else. Works the same on:
-
-- **Windows** — Docker Desktop
-- **macOS** — Docker Desktop or OrbStack
-- **Linux** — Docker Engine + the `docker compose` plugin
-
-The container is Linux regardless of host OS, and the image is multi-arch, so an
-Apple-silicon Mac, an x86 PC, and an ARM box all run the identical stack.
-
-## Try it in 30 seconds (demo mode — no clone)
-
-No Husqvarna account, no mower, no config, **no clone**. The whole stack is three
-published images and one `compose.yaml`, so grab that single file and run it:
-
-```bash
-mkdir automower-dashboard && cd automower-dashboard
-curl -O https://raw.githubusercontent.com/robertobasile84/husqvarna-automower-dashboard/main/compose.yaml
-docker compose up -d
+```mermaid
+flowchart LR
+    API["Husqvarna<br/>Connect API"] -->|"WebSocket + REST poll"| C["collector<br/>(Python)"]
+    C -->|write| DB[("InfluxDB")]
+    DB -->|Flux| G["Grafana"]
 ```
 
-Open **http://localhost:3005** → the **Automower** dashboard is pre-loaded and
-filling in with synthetic data, no login needed (Grafana opens read-only). To
-edit, log in `admin` / `admin` — local-testing defaults from the compose file.
+## Requirements
 
-> **Nothing to clone or build.** `docker compose up -d` *pulls* prebuilt
-> multi-arch images from GHCR — the collector and Grafana (dashboard + datasource
-> baked in) are both published images, and the compose file mounts nothing from
-> disk. **That one file is the entire deployment.** You only need the repo if you
-> want to [contribute](#working-on-the-collector-uv) (clone) or
-> [change the dashboard / collector](#working-on-the-dashboard) (fork + build).
+Just **Docker + Docker Compose v2** — nothing else. Same on Windows (Docker
+Desktop), macOS (Docker Desktop / OrbStack), and Linux (Docker Engine + the
+`docker compose` plugin). All images are multi-arch (amd64 / arm64), so a
+Raspberry Pi, an x86 PC, and an Apple-silicon Mac run the identical stack.
 
 ## Run it for real
 
