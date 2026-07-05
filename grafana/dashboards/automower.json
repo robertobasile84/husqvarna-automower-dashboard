@@ -209,7 +209,7 @@
     },
     {
       "type": "geomap",
-      "title": "Position",
+      "title": "Position (last 50 points)",
       "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
       "gridPos": { "h": 9, "w": 12, "x": 0, "y": 12 },
       "fieldConfig": { "defaults": {}, "overrides": [] },
@@ -238,7 +238,7 @@
         {
           "refId": "A",
           "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_position\" and (r._field == \"latitude\" or r._field == \"longitude\"))\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> keep(columns: [\"_time\", \"latitude\", \"longitude\"])"
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_position\" and (r._field == \"latitude\" or r._field == \"longitude\"))\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> keep(columns: [\"_time\", \"latitude\", \"longitude\"])\n  |> sort(columns: [\"_time\"])\n  |> tail(n: 50)"
         }
       ]
     },
@@ -268,32 +268,58 @@
       "panels": []
     },
     {
-      "type": "stat",
-      "title": "Total cutting time",
+      "type": "table",
+      "title": "Time per state (selected window)",
+      "description": "Time the mower accrued in each state within the selected time range — the increase of each cumulative counter over the window.",
       "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 22 },
-      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "fixed", "fixedColor": "green" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false }, "colorMode": "value", "textMode": "value" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" } }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Time" },
+            "properties": [
+              { "id": "unit", "value": "s" },
+              { "id": "custom.cellOptions", "value": { "type": "gauge", "mode": "gradient" } },
+              { "id": "min", "value": 0 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "State" },
+            "properties": [ { "id": "custom.width", "value": 160 } ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [ { "displayName": "Time", "desc": true } ]
+      },
       "targets": [
         {
           "refId": "A",
+          "format": "table",
           "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_statistics\" and r._field == \"total_cutting_time\")\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> last()"
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_statistics\" and (r._field == \"total_cutting_time\" or r._field == \"total_charging_time\" or r._field == \"total_searching_time\"))\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> group(columns: [\"_field\", \"mower\"])\n  |> spread()\n  |> group(columns: [\"_field\"])\n  |> sum()\n  |> group()\n  |> map(fn: (r) => ({ State: if r._field == \"total_cutting_time\" then \"Mowing\" else if r._field == \"total_charging_time\" then \"Charging\" else if r._field == \"total_searching_time\" then \"Searching\" else r._field, Time: r._value }))\n  |> keep(columns: [\"State\", \"Time\"])"
         }
       ]
     },
     {
-      "type": "stat",
-      "title": "Total running time",
+      "type": "timeseries",
+      "title": "Charging cycles & collisions",
       "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 22 },
-      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "fixed", "fixedColor": "blue" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false }, "colorMode": "value", "textMode": "value" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10, "showPoints": "never" } },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
       "targets": [
         {
           "refId": "A",
           "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_statistics\" and r._field == \"total_running_time\")\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> last()"
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_statistics\" and (r._field == \"number_of_charging_cycles\" or r._field == \"number_of_collisions\"))\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"_field\", \"mower\"])\n  |> group(columns: [\"mower\", \"_field\"])"
         }
       ]
     },
@@ -301,7 +327,7 @@
       "type": "stat",
       "title": "Blade usage time",
       "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 22 },
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 30 },
       "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "fixed", "fixedColor": "orange" } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false }, "colorMode": "value", "textMode": "value" },
       "targets": [
@@ -314,39 +340,9 @@
     },
     {
       "type": "stat",
-      "title": "Charging cycles",
-      "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 22 },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "yellow" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false }, "colorMode": "value", "textMode": "value" },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_statistics\" and r._field == \"number_of_charging_cycles\")\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> last()"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Collisions",
-      "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 22 },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "red" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false }, "colorMode": "value", "textMode": "value" },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_statistics\" and r._field == \"number_of_collisions\")\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> last()"
-        }
-      ]
-    },
-    {
-      "type": "stat",
       "title": "Drive distance",
       "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 22 },
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 30 },
       "fieldConfig": { "defaults": { "unit": "lengthm", "color": { "mode": "fixed", "fixedColor": "purple" } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false }, "colorMode": "value", "textMode": "value" },
       "targets": [
@@ -354,42 +350,6 @@
           "refId": "A",
           "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
           "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_statistics\" and r._field == \"total_drive_distance\")\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> last()"
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "Cumulative cutting & running time",
-      "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
-      "fieldConfig": {
-        "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10, "showPoints": "never" } },
-        "overrides": []
-      },
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_statistics\" and (r._field == \"total_cutting_time\" or r._field == \"total_running_time\"))\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"_field\", \"mower\"])\n  |> group(columns: [\"mower\", \"_field\"])"
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "Charging cycles & collisions",
-      "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
-      "fieldConfig": {
-        "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10, "showPoints": "never" } },
-        "overrides": []
-      },
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_statistics\" and (r._field == \"number_of_charging_cycles\" or r._field == \"number_of_collisions\"))\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"_field\", \"mower\"])\n  |> group(columns: [\"mower\", \"_field\"])"
         }
       ]
     }
