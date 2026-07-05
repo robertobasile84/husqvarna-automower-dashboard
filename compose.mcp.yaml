@@ -1,0 +1,35 @@
+# Optional overlay — runs Grafana Labs' official MCP server next to the stack so
+# an AI assistant (Claude, etc.) can talk to your dashboard and its data.
+#
+#   docker compose -f compose.yaml -f compose.mcp.yaml up -d
+#
+# The MCP server reaches Grafana in-network at http://grafana:3000 — no tunnel or
+# tailnet plumbing needed. You do need to give it a Grafana service-account token:
+#
+#   Grafana -> Administration -> Service accounts -> Add (role: Viewer)
+#     -> Add service account token -> copy it into .env as
+#        GRAFANA_SERVICE_ACCOUNT_TOKEN=glsa_xxx
+#
+# Then point your MCP client at  http://<host>:${MCP_PORT:-8000}/mcp  (streamable
+# HTTP). Keep that port on a trusted network (localhost / your tailnet) — the SA
+# token is what gates access to Grafana, and the endpoint has no auth of its own.
+services:
+  mcp:
+    image: mcp/grafana:latest
+    restart: unless-stopped
+    depends_on:
+      - grafana
+    command:
+      - -transport
+      - streamable-http
+      - -address
+      - 0.0.0.0:8000
+      # MCP clients aren't browsers, so Host-header validation mostly gets in the
+      # way here; default to allow-all and rely on network isolation + the token.
+      - -allowed-hosts
+      - ${MCP_ALLOWED_HOSTS:-*}
+    environment:
+      GRAFANA_URL: http://grafana:3000
+      GRAFANA_SERVICE_ACCOUNT_TOKEN: ${GRAFANA_SERVICE_ACCOUNT_TOKEN:?set GRAFANA_SERVICE_ACCOUNT_TOKEN in .env — see compose.mcp.yaml}
+    ports:
+      - "${MCP_PORT:-8000}:8000"
