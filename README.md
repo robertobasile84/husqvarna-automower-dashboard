@@ -60,10 +60,11 @@ filling in, no login needed (Grafana opens read-only). To edit, log in `admin` /
 `admin` — default credentials from the compose file, for local testing only.
 
 > **Nothing compiles here.** `docker compose up -d` *pulls* the prebuilt
-> multi-arch images from GHCR — you never build. The clone is just the easy way
-> to grab the `compose.yaml` + `grafana/` files; if you'd rather not check out the
-> source at all, see [Deploying to a homelab](#deploying-to-a-homelab) for the
-> files-only approach. Building from source is opt-in (`compose.dev.yaml`, below).
+> multi-arch images from GHCR — you never build. Both the collector *and* Grafana
+> (dashboard + datasource baked in) are published images, so the only file you
+> actually need to run the stack is `compose.yaml` — the clone is just the easy
+> way to get it. See [Deploying to a homelab](#deploying-to-a-homelab) for the
+> single-file approach. Building from source is opt-in (`compose.dev.yaml`, below).
 
 ## Run it for real
 
@@ -205,11 +206,31 @@ reproducible and matches your local env.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow — `main` is
 protected, so changes land through pull requests.
 
+## Working on the dashboard
+
+Grafana is also a published image (`automower-grafana`) — the stock Grafana with
+this project's dashboard, InfluxDB datasource, and provisioning baked in from the
+[`grafana/`](grafana/) folder, plus a small entrypoint that stamps the map center
+(`MAP_LAT`/`MAP_LON`/`MAP_ZOOM`) into the dashboard at startup. That's why running
+the stack needs no `grafana/` folder and dashboard updates ship as an image tag.
+
+To change the dashboard, edit [`grafana/dashboards/automower.json`](grafana/dashboards/automower.json)
+(easiest: tweak it in the Grafana UI, then **Dashboard settings → JSON Model** →
+copy it back over that file), then rebuild just Grafana from source:
+
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml up -d --build grafana
+```
+
+Merging to `main` republishes both images; consumers get the new dashboard with a
+plain `docker compose pull`.
+
 ## Deploying to a homelab
 
 This is a standalone stack, but it drops straight into a per-service Compose
-homelab (like `srv-basement`). Because the collector image is pulled from GHCR,
-you only need `compose.yaml`, the `grafana/` folder, and your `.env` — no source
+homelab (like `srv-basement`). Because **both** images are pulled from GHCR
+(collector *and* Grafana, with the dashboard baked in), you only need
+`compose.yaml` and your `.env` — no `grafana/` folder, no source
 checkout or build. Add a catalog row, and — if you want a cert'd name for the
 Grafana UI — front it with your usual Tailscale Serve sidecar. Only the
 collector's outbound HTTPS/WSS to Husqvarna is required; nothing needs to be

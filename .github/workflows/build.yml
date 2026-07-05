@@ -1,8 +1,11 @@
 name: build
 
-# Builds and publishes the multi-arch collector image to GHCR.
-# - pushes to `main`      -> :latest
-# - tags like `v1.2.3`    -> :1.2.3, :1.2, :1  and :latest
+# Builds and publishes the multi-arch images to GHCR:
+#   - collector -> ghcr.io/<owner>/automower-collector
+#   - grafana   -> ghcr.io/<owner>/automower-grafana
+# Tagging:
+#   - pushes to `main`      -> :latest
+#   - tags like `v1.2.3`    -> :1.2.3, :1.2, :1  and :latest
 on:
   push:
     branches: [main]
@@ -16,6 +19,14 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: automower-collector
+            context: ./collector
+          - image: automower-grafana
+            context: ./grafana
     steps:
       - uses: actions/checkout@v7
 
@@ -34,7 +45,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           # metadata-action lowercases the owner, as GHCR requires.
-          images: ghcr.io/${{ github.repository_owner }}/automower-collector
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
@@ -45,10 +56,10 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
-          context: ./collector
+          context: ${{ matrix.context }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

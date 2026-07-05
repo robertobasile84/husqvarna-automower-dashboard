@@ -61,7 +61,11 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
 
   grafana:
-    image: grafana/grafana:11.4.0
+    # Custom image: stock Grafana + this project's dashboard, datasource, and
+    # provisioning baked in (built from ./grafana). Nothing to mount, and
+    # dashboard updates ship as a new image tag. Override GRAFANA_IMAGE to pin a
+    # specific version; devs building from source use compose.dev.yaml.
+    image: ${GRAFANA_IMAGE:-ghcr.io/robertobasile84/automower-grafana:latest}
     restart: unless-stopped
     depends_on:
       influxdb:
@@ -76,32 +80,17 @@ services:
       # expose Grafana without a network-level auth layer in front of it).
       GF_AUTH_ANONYMOUS_ENABLED: ${GRAFANA_ANONYMOUS:-true}
       GF_AUTH_ANONYMOUS_ORG_ROLE: ${GRAFANA_ANONYMOUS_ROLE:-Viewer}
-      # Consumed by the provisioned datasource (grafana/provisioning/datasources).
+      # Consumed by the baked-in provisioned datasource.
       INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-automower-dev-token}
       INFLUXDB_ORG: ${INFLUXDB_ORG:-automower}
       INFLUXDB_BUCKET: ${INFLUXDB_BUCKET:-automower}
-      # Position-map center. Defaults to the demo location (Zürich). Set these in
-      # .env to center the map on your own mower/home — see the README. They are
-      # substituted into the provisioned dashboard at startup by the entrypoint.
+      # Position-map center. The image stamps these into the dashboard at start.
+      # Defaults to the demo location (Zürich) — set in .env to center on your lawn.
       MAP_LAT: ${MAP_LAT:-47.377}
       MAP_LON: ${MAP_LON:-8.5417}
       MAP_ZOOM: ${MAP_ZOOM:-17}
-    # Render the dashboards from source (substituting the map center) into the
-    # provisioning path, then hand off to Grafana's normal entrypoint.
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        mkdir -p /var/lib/grafana/dashboards-live
-        for f in /etc/grafana/dashboards-src/*.json; do
-          sed -E "s/(\"lat\": )[-0-9.]+/\1$$MAP_LAT/; s/(\"lon\": )[-0-9.]+/\1$$MAP_LON/; s/(\"zoom\": )[0-9.]+/\1$$MAP_ZOOM/" \
-            "$$f" > "/var/lib/grafana/dashboards-live/$$(basename "$$f")"
-        done
-        exec /run.sh
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/etc/grafana/dashboards-src:ro
     ports:
       - "${GRAFANA_PORT:-3005}:3000"
 
