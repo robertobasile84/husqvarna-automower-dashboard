@@ -270,7 +270,7 @@
     {
       "type": "table",
       "title": "Time per state (selected window)",
-      "description": "Time the mower accrued in each state within the selected time range — the increase of each cumulative counter over the window.",
+      "description": "How long the mower spent in each activity state within the selected time range, computed from the activity timeline (durations between state changes). The rows sum to roughly the window length.",
       "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
       "fieldConfig": {
@@ -301,7 +301,7 @@
           "refId": "A",
           "format": "table",
           "datasource": { "type": "influxdb", "uid": "automower-influxdb" },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_statistics\" and (r._field == \"total_cutting_time\" or r._field == \"total_charging_time\" or r._field == \"total_searching_time\"))\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> group(columns: [\"_field\", \"mower\"])\n  |> spread()\n  |> group(columns: [\"_field\"])\n  |> sum()\n  |> group()\n  |> map(fn: (r) => ({ State: if r._field == \"total_cutting_time\" then \"Mowing\" else if r._field == \"total_charging_time\" then \"Charging\" else if r._field == \"total_searching_time\" then \"Searching\" else r._field, Time: r._value }))\n  |> keep(columns: [\"State\", \"Time\"])"
+          "query": "import \"strings\"\nfrom(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"automower_status\" and r._field == \"activity\")\n  |> filter(fn: (r) => r.mower =~ /^${mower:regex}$/)\n  |> group(columns: [\"mower\"])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> elapsed(unit: 1s)\n  |> map(fn: (r) => ({ State: strings.title(v: strings.replaceAll(v: r._value, t: \"_\", u: \" \")), Time: -1 * r.elapsed }))\n  |> filter(fn: (r) => r.Time > 0)\n  |> group(columns: [\"State\"])\n  |> sum(column: \"Time\")\n  |> group()\n  |> keep(columns: [\"State\", \"Time\"])"
         }
       ]
     },
