@@ -1,14 +1,16 @@
 # Automower dashboard — collector + InfluxDB + Grafana.
 #
-# All images are multi-arch (amd64 / arm64), so this runs anywhere Docker
-# Compose runs. The collector is built from ./collector by default, so a fresh
-# clone launches with no published image needed:
+# This file is self-contained: it pulls three published multi-arch images
+# (collector + Grafana, both with everything baked in, plus stock InfluxDB) and
+# mounts nothing from disk. So it's the only file you need — grab it and run:
 #
-#     docker compose up -d --build
+#     docker compose up -d
 #
 # With no Husqvarna credentials set, the collector runs in DEMO mode and feeds
 # the dashboard synthetic data — so you can see it working before wiring up a
-# real mower. Copy .env.example to .env and add credentials for real data.
+# real mower. Add credentials in a .env next to this file for real data.
+#
+# Developers building from source use compose.dev.yaml (see the repo).
 #
 # NOTE: the default passwords/token below are for local testing ONLY. Set your
 # own in .env before deploying anywhere that matters.
