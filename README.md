@@ -245,9 +245,22 @@ query the mower data directly.
    claude mcp add --transport http automower http://localhost:8000/mcp
    ```
 
-Keep port `8000` on a trusted network (localhost / your tailnet): the endpoint
-has no auth of its own — the service-account token is what scopes Grafana access,
-and a Viewer token keeps it read-only.
+### How it's exposed (your call)
+
+The MCP endpoint has **no auth of its own** — the service-account token only scopes
+what it can read from Grafana (a Viewer token keeps it read-only). So *you* decide
+what network it listens on, via `MCP_BIND` in `.env`:
+
+| `MCP_BIND` | Reachable from | Connect with |
+|---|---|---|
+| `127.0.0.1` (default) | localhost only | an SSH tunnel: `ssh -L 8000:localhost:8000 <host>` → `http://localhost:8000/mcp` |
+| `<tailnet-ip>` (`tailscale ip -4`) | your tailnet only | `http://<host>:8000/mcp` over Tailscale |
+| `0.0.0.0` | all interfaces incl. LAN | `http://<host>:8000/mcp` — only on a network you trust |
+
+Then register it (Claude Code):
+```bash
+claude mcp add --transport http automower http://<host>:8000/mcp
+```
 
 ## Deploying to a homelab
 
