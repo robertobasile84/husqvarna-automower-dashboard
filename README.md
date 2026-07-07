@@ -73,7 +73,7 @@ HUSQVARNA_CLIENT_SECRET=your-application-secret
 # Secure the stack for anything networked (random token: openssl rand -hex 32).
 INFLUXDB_TOKEN=replace-with-a-long-random-string
 GRAFANA_PASSWORD=replace-with-a-password
-GRAFANA_ANONYMOUS=false      # require a Grafana login (omit to keep the open read-only view)
+GRAFANA_ANONYMOUS=false      # require a Grafana login (auto-off for a real mower; set explicitly to override)
 
 # Center the Position map on your lawn (any map site → right-click → coordinates).
 MAP_LAT=42.7135
@@ -116,7 +116,7 @@ ones you'll actually touch:
 | `WRITE_POSITIONS` | `true` | Set `false` to skip storing GPS positions |
 | `LOG_LEVEL` | `INFO` | `DEBUG` to see every event and write |
 | `MAP_LAT` / `MAP_LON` / `MAP_ZOOM` | Zürich demo location | Center of the Position map — see below |
-| `GRAFANA_ANONYMOUS` | `true` | `false` to require a Grafana login instead of read-only anonymous view |
+| `GRAFANA_ANONYMOUS` | auto | Auto-decided from demo mode: anonymous read-only view **on** for the demo, **off** (login required) for a real mower so a personal dashboard isn't exposed. Set `true`/`false` to override |
 
 ### Centering the map on your mower
 
