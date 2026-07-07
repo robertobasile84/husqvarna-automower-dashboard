@@ -76,11 +76,15 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
       GF_USERS_DEFAULT_THEME: dark
-      # Anonymous, read-only (Viewer) access — on by default so the demo lands
-      # straight on the dashboard with no login. The admin login still works for
-      # editing. Set GRAFANA_ANONYMOUS=false to require a login (e.g. if you
-      # expose Grafana without a network-level auth layer in front of it).
-      GF_AUTH_ANONYMOUS_ENABLED: ${GRAFANA_ANONYMOUS:-true}
+      # Anonymous, read-only (Viewer) access. The entrypoint auto-decides from the
+      # same demo signal the collector uses: ON for the demo (no login), but OFF
+      # for a REAL mower (credentials present) so a personal dashboard is never
+      # exposed anonymously by accident. GRAFANA_ANONYMOUS (true/false) overrides;
+      # these three feed the auto-decision.
+      GRAFANA_ANONYMOUS: ${GRAFANA_ANONYMOUS:-}
+      HUSQVARNA_CLIENT_ID: ${HUSQVARNA_CLIENT_ID:-}
+      HUSQVARNA_CLIENT_SECRET: ${HUSQVARNA_CLIENT_SECRET:-}
+      DEMO_MODE: ${DEMO_MODE:-}
       GF_AUTH_ANONYMOUS_ORG_ROLE: ${GRAFANA_ANONYMOUS_ROLE:-Viewer}
       # Consumed by the baked-in provisioned datasource.
       INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-automower-dev-token}
